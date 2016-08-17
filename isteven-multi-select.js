@@ -507,6 +507,7 @@ angular.module( 'isteven-multi-select', ['ng'] ).directive( 'istevenMultiSelect'
                             angular.forEach( value, function( value1, key1 ) {
                                 if ( outputProps.indexOf( key1 ) > -1 ) {
                                     tempObj[ key1 ] = value1;
+                                    $scope.outputModel.push ( value1 );
                                 }
                             });
                             if (typeof $scope.inputModelValue === 'undefined') {
