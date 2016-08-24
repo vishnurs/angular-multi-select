@@ -33,7 +33,7 @@
 
 'use strict'
 
-angular.module( 'isteven-multi-select', ['ng'] ).directive( 'istevenMultiSelect' , [ '$sce', '$timeout', '$templateCache', function ( $sce, $timeout, $templateCache ) {
+angular.module( 'isteven-multi-select', ['ng'] ).directive( 'istevenMultiSelect' , [ '$sce', '$timeout', '$templateCache', '$q', function ( $sce, $timeout, $templateCache, $q ) {
     return {
         restrict:
             'AE',
@@ -73,14 +73,16 @@ angular.module( 'isteven-multi-select', ['ng'] ).directive( 'istevenMultiSelect'
 
         link: function ( $scope, element, attrs ) {
             $scope.$watch( 'outputModel', function( newValue, oldValue ) {
-                // set to way binding between output and input model
-                angular.forEach( $scope.inputModel, function ( value ) {
-                  if ( $scope.outputModel.indexOf( value[ attrs.uniqueKey ] ) > -1 ) {
-                    value[ attrs.tickProperty ] = true;
-                  } else {
-                    value[ attrs.tickProperty ] = false;
-                  }
-                })
+              if ( !$scope.fromEvents ) {
+                  // set to way binding between output and input model
+                  angular.forEach( $scope.inputModel, function ( value ) {
+                    if ( $scope.outputModel.indexOf( value[ attrs.uniqueKey ] ) > -1 ) {
+                      value[ attrs.tickProperty ] = true;
+                    } else {
+                      value[ attrs.tickProperty ] = false;
+                    }
+                  })
+              }
             })
             if ( $scope.inputModelValue ) {
                 $scope.inputModel = JSON.parse(JSON.stringify($scope.inputModelValue));
@@ -496,39 +498,72 @@ angular.module( 'isteven-multi-select', ['ng'] ).directive( 'istevenMultiSelect'
             }
 
             // update $scope.outputModel
-            $scope.refreshOutputModel = function() {
+            $scope.refreshOutputModel = function(callback) {
 
-                $scope.outputModel  = [];
+                $scope.outputModel  = $scope.outputModel || [];
                 var
                     outputProps     = [],
-                    tempObj         = {};
+                    tempObj         = {},
+                    promises        = [];
 
                 // v4.0.0
                 if ( typeof attrs.outputProperties !== 'undefined' ) {
                     outputProps = attrs.outputProperties.split(' ');
                     angular.forEach( $scope.inputModel, function( value, key ) {
+                        var deferred = $q.defer();
+                        promises.push(deferred.promise);
                         if (
                             typeof value !== 'undefined'
                             && typeof value[ attrs.groupProperty ] === 'undefined'
                             && value[ $scope.tickProperty ] === true
                         ) {
-                            tempObj         = {};
+                            deferred.resolve(true);
                             angular.forEach( value, function( value1, key1 ) {
+                                var def1 = $q.defer();
+                                promises.push(def1.promise);
                                 if ( outputProps.indexOf( key1 ) > -1 ) {
-                                    tempObj[ key1 ] = value1;
+                                  if($scope.outputModel.indexOf(value1) === -1) {
                                     $scope.outputModel.push ( value1 );
+                                    def1.resolve(true)
+                                  } else {
+                                    def1.resolve(true)
+                                  }
+                                } else {
+                                    def1.resolve(true)
                                 }
                             });
-                            if (typeof $scope.inputModelValue === 'undefined') {
-                                var index = $scope.outputModel.push( tempObj );
-                                delete $scope.outputModel[ index - 1 ][ $scope.indexProperty ];
-                                delete $scope.outputModel[ index - 1 ][ $scope.spacingProperty ];
-                            }
+                            // if (typeof $scope.inputModelValue === 'undefined') {
+                            //    var index = $scope.outputModel.push( tempObj );
+                            //    delete $scope.outputModel[ index - 1 ][ $scope.indexProperty ];
+                            //    delete $scope.outputModel[ index - 1 ][ $scope.spacingProperty ];
+                            // }
+                        } else if (
+                          typeof value !== 'undefined'
+                          && typeof value[ attrs.groupProperty ] === 'undefined'
+                          && value[ $scope.tickProperty ] === false
+                        ) {
+                          deferred.resolve(true)
+                          angular.forEach( value, function( value1, key1 ) {
+                              var def2 = $q.defer();
+                              promises.push(def2.promise);
+                              if ( outputProps.indexOf( key1 ) > -1 ) {
+                                  if ( $scope.outputModel.indexOf (value1) > -1 ) {
+                                      $scope.outputModel.splice( $scope.outputModel.indexOf (value1), 1 )
+                                      def2.resolve(true)
+                                  } else {
+                                    def2.resolve(true)
+                                  }
+                              } else {
+                                def2.resolve(true);
+                              }
+                          });
                         }
                     });
                 }
                 else {
                     angular.forEach( $scope.inputModel, function( value, key ) {
+                        var deferred = $q.defer();
+                        promises.push(deferred.promise);
                         if (
                             typeof value !== 'undefined'
                             && typeof value[ attrs.groupProperty ] === 'undefined'
@@ -538,9 +573,15 @@ angular.module( 'isteven-multi-select', ['ng'] ).directive( 'istevenMultiSelect'
                             var index = $scope.outputModel.push( temp );
                             delete $scope.outputModel[ index - 1 ][ $scope.indexProperty ];
                             delete $scope.outputModel[ index - 1 ][ $scope.spacingProperty ];
+                            deferred.resolve(true)
+                        } else {
+                          deferred.resolve(true)
                         }
                     });
                 }
+                $q.all(promises).then(function() {
+                  if($scope[callback]) $scope[callback]()
+                })
             }
 
             // refresh button label
@@ -743,7 +784,7 @@ angular.module( 'isteven-multi-select', ['ng'] ).directive( 'istevenMultiSelect'
 
             // select All / select None / reset buttons
             $scope.select = function( type, e ) {
-
+                $scope.fromEvents = true;
                 var helperIndex = helperItems.indexOf( e.target );
                 $scope.tabIndex = helperIndex;
 
@@ -756,9 +797,8 @@ angular.module( 'isteven-multi-select', ['ng'] ).directive( 'istevenMultiSelect'
                                 }
                             }
                         });
-                        $scope.refreshOutputModel();
+                        $scope.refreshOutputModel('onSelectAll');
                         $scope.refreshButton();
-                        $scope.onSelectAll();
                         break;
                     case 'NONE':
                         angular.forEach( $scope.filteredModel, function( value, key ) {
@@ -768,9 +808,8 @@ angular.module( 'isteven-multi-select', ['ng'] ).directive( 'istevenMultiSelect'
                                 }
                             }
                         });
-                        $scope.refreshOutputModel();
+                        $scope.refreshOutputModel('onSelectNone');
                         $scope.refreshButton();
-                        $scope.onSelectNone();
                         break;
                     case 'RESET':
                         angular.forEach( $scope.filteredModel, function( value, key ) {
@@ -779,9 +818,8 @@ angular.module( 'isteven-multi-select', ['ng'] ).directive( 'istevenMultiSelect'
                                 value[ $scope.tickProperty ] = $scope.backUp[ temp ][ $scope.tickProperty ];
                             }
                         });
-                        $scope.refreshOutputModel();
+                        $scope.refreshOutputModel('onReset');
                         $scope.refreshButton();
-                        $scope.onReset();
                         break;
                     case 'CLEAR':
                         $scope.tabIndex = $scope.tabIndex + 1;
