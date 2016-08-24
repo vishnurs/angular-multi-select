@@ -72,8 +72,17 @@ angular.module( 'isteven-multi-select', ['ng'] ).directive( 'istevenMultiSelect'
             'isteven-multi-select.htm',
 
         link: function ( $scope, element, attrs ) {
-
-            if($scope.inputModelValue) {
+            $scope.$watch( 'outputModel', function( newValue, oldValue ) {
+                // set to way binding between output and input model
+                angular.forEach( $scope.inputModel, function ( value ) {
+                  if ( $scope.outputModel.indexOf( value[ attrs.uniqueKey ] ) > -1 ) {
+                    value[ attrs.tickProperty ] = true;
+                  } else {
+                    value[ attrs.tickProperty ] = false;
+                  }
+                })
+            })
+            if ( $scope.inputModelValue ) {
                 $scope.inputModel = JSON.parse(JSON.stringify($scope.inputModelValue));
                 var uniqueKey = '';
                 if (typeof attrs.uniqueKey !== 'undefined') {
