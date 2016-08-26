@@ -9,7 +9,7 @@
  * --------------------------------------------------------------------------------
  * The MIT License (MIT)
  *
- * Copyright (c) 2014 Ignatius Steven (https://github.com/isteven)
+ * Copyright (c) 2014 Ignatius Steven (https://github.c7om/isteven)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -72,6 +72,7 @@ angular.module( 'isteven-multi-select', ['ng'] ).directive( 'istevenMultiSelect'
             'isteven-multi-select.htm',
 
         link: function ( $scope, element, attrs ) {
+            // Changes in outputModel should be added to inputModel
             $scope.$watch( 'outputModel', function( newValue, oldValue ) {
               if ( !$scope.fromEvents ) {
                   // set to way binding between output and input model
@@ -84,6 +85,40 @@ angular.module( 'isteven-multi-select', ['ng'] ).directive( 'istevenMultiSelect'
                   })
               }
             })
+            // changes in inputModelValue should be added to corresponding inputModel
+            $scope.$watch( 'inputModelValue', function( newValue, oldValue ) {
+              for (var i in newValue) {
+                for (var j in $scope.inputModel) {
+
+                  if (newValue[i][attrs.uniqueKey] === $scope.inputModel[j][attrs.uniqueKey]) {
+                    // edited existing row
+                    var tickPropertyValue = $scope.inputModel[j][attrs.tickProperty];
+                    $scope.inputModel[j] = JSON.parse(JSON.stringify(newValue[i]));
+                    $scope.inputModel[j][attrs.tickProperty] = tickPropertyValue;
+                    break;
+                  } else {
+                    if ( j == $scope.inputModel.length-1 ) {
+                      // new row added
+                      $scope.inputModel[parseInt(j)+1] = JSON.parse(JSON.stringify(newValue[i]));
+                      break;
+                    }
+                  }
+                }
+              }
+
+              // another loop to check for deletion
+              for (var i in $scope.inputModel) {
+                for (var j in newValue) {
+
+                  if($scope.inputModel[i][attrs.uniqueKey] === newValue[j][attrs.uniqueKey]) {
+                    break;
+                  } else if ( j == newValue.length-1 ) {
+                    $scope.inputModel.splice(i,1);
+                  }
+                }
+              }
+            }, true)
+
             if ( $scope.inputModelValue ) {
                 $scope.inputModel = JSON.parse(JSON.stringify($scope.inputModelValue));
                 var uniqueKey = '';
