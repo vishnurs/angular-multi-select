@@ -44,6 +44,7 @@ angular.module( 'isteven-multi-select', ['ng'] ).directive( 'istevenMultiSelect'
             inputModelValue : '=',
             inputModel      : '=',
             outputModel     : '=',
+            inputFilter     : '=',
 
             // settings based on attribute
             isDisabled      : '=',
@@ -72,7 +73,7 @@ angular.module( 'isteven-multi-select', ['ng'] ).directive( 'istevenMultiSelect'
             'isteven-multi-select.htm',
 
         link: function ( $scope, element, attrs ) {
-            // Changes in outputModel should be added to inputModel
+            // Binding: OutputModel -> InputModel
             $scope.$watch( 'outputModel', function( newValue, oldValue ) {
               if ( !$scope.fromEvents ) {
                   // set to way binding between output and input model
@@ -340,8 +341,22 @@ angular.module( 'isteven-multi-select', ['ng'] ).directive( 'istevenMultiSelect'
             }
 
             $scope.removeGroupEndMarker = function( item ) {
+              // if input filter is there in scope, apply it or else go with default group filter.
+              // TODO: Group filter won't work if input filter is there. Need to fix this part
+              if ($scope.inputFilter) {
+                var success = false;
+                for (var key in $scope.inputFilter) {
+                  if (typeof item[key] !== 'undefined' && item[key] !== $scope.inputFilter[key]) {
+                    success = false;
+                  } else {
+                    success = true;
+                  }
+                }
+                return success;
+              } else {
                 if ( typeof item[ attrs.groupProperty ] !== 'undefined' && item[ attrs.groupProperty ] === false ) return false;
                 return true;
+              }
             }
 
             // call this function when an item is clicked
