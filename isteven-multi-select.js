@@ -75,7 +75,7 @@ angular.module( 'isteven-multi-select', ['ng'] ).directive( 'istevenMultiSelect'
         link: function ( $scope, element, attrs ) {
             // Binding: OutputModel -> InputModel
             $scope.$watch( 'outputModel', function( newValue, oldValue ) {
-              if ( !$scope.fromEvents ) {
+              //if ( !$scope.fromEvents ) {
                   // set to way binding between output and input model
                   angular.forEach( $scope.inputModel, function ( value ) {
                     if ( $scope.outputModel.indexOf( value[ attrs.uniqueKey ] ) > -1 ) {
@@ -84,8 +84,11 @@ angular.module( 'isteven-multi-select', ['ng'] ).directive( 'istevenMultiSelect'
                       value[ attrs.tickProperty ] = false;
                     }
                   })
-              }
-            })
+                  if($scope.inputModel.length-1 == index) {
+                    $scope.refreshButton()
+                  }
+              //}
+            }, true)
             // changes in inputModelValue should be added to corresponding inputModel
             $scope.$watch( 'inputModelValue', function( newValue, oldValue ) {
               for (var i in newValue) {
